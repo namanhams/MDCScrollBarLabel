@@ -30,14 +30,8 @@
 #define DEGREES_TO_RADIANS(x) M_PI * (x) / 180.0
 
 
-static CGFloat const kMDCScrollBarLabelWidth = 100.0f;
+static CGFloat const kMDCScrollBarLabelWidth = 56.0f;
 static CGFloat const kMDCScrollBarLabelHeight = 32.0f;
-static CGFloat const kMDCScrollBarLabelClockWidth = 24.0f;
-static CGFloat const kMDCScrollBarLabelClockTopMargin = -1.0f;
-static CGFloat const kMDCScrollBarLabelClockLeftMargin = 4.0f;
-static CGFloat const kMDCScrollBarLabelClockRightMargin = 7.0f;
-static NSTimeInterval const kMDCScrollBarLabelDefaultClockAnimationDuration = 0.2f;
-static NSTimeInterval const kMDCScrollBarLabelDefaultFadeAnimationDuration = 0.3f;
 static CGFloat const kMDCScrollBarLabelDefaultHorizontalPadding = 10.0f;
 static CGFloat const kMDCScrollBarLabelDefaultVerticalPadding = 30.0f;
 
@@ -50,16 +44,6 @@ typedef enum {
 
 @interface MDCScrollBarLabel ()
 @property (nonatomic, strong) NSDate *displayedDate;
-@property (nonatomic, strong) UIImageView *clockImageView;
-@property (nonatomic, strong) UIImageView *clockCenterImageView;
-@property (nonatomic, strong) UIImageView *hourHandImageView;
-@property (nonatomic, strong) UIImageView *minuteHandImageView;
-@property (nonatomic, strong) UILabel *timeLabel;
-@property (nonatomic, strong) UILabel *weekdayLabel;
-
-@property (nonatomic, strong) NSCalendar *calendar;
-@property (nonatomic, strong) NSDateFormatter *dateFormatter;
-@property (nonatomic, strong) NSDateFormatter *weekdayDateFormatter;
 @end
 
 
@@ -76,20 +60,10 @@ typedef enum {
 
     self = [super initWithFrame:frame];
     if (self) {
-        _clockAnimationDuration = kMDCScrollBarLabelDefaultClockAnimationDuration;
-        _fadeAnimationDuration = kMDCScrollBarLabelDefaultFadeAnimationDuration;
         _horizontalPadding = kMDCScrollBarLabelDefaultHorizontalPadding;
         _verticalPadding = kMDCScrollBarLabelDefaultVerticalPadding;
 
         _scrollView = scrollView;
-
-        _calendar = [[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierGregorian];
-
-        _dateFormatter = [NSDateFormatter new];
-        _dateFormatter.dateFormat = @"h:mm a";
-
-        _weekdayDateFormatter = [NSDateFormatter new];
-        _weekdayDateFormatter.dateFormat = @"EEEE";
 
         self.alpha = 0.0f;
         self.backgroundColor = [UIColor clearColor];
@@ -101,117 +75,22 @@ typedef enum {
         backgroundImageView.frame = CGRectMake(0, 0, self.frame.size.width, self.frame.size.height);
         [self addSubview:backgroundImageView];
 
-        UIImage *clockFaceImage = [UIImage imageNamed:@"clock-face.png"];
-        UIImageView *clockImageView = [[UIImageView alloc] initWithImage:clockFaceImage];
-        clockImageView.frame = CGRectMake(kMDCScrollBarLabelClockLeftMargin,
-                                          floorf((self.frame.size.height - clockImageView.frame.size.height)/2)
-                                            + kMDCScrollBarLabelClockTopMargin,
-                                          clockImageView.frame.size.width,
-                                          clockImageView.frame.size.height);
-        [self addSubview:clockImageView];
-
-        UIImage *clockCenterImage = [UIImage imageNamed:@"clock-center.png"];
-        UIImageView *clockCenterImageView = [[UIImageView alloc] initWithImage:clockCenterImage];
-        clockCenterImageView.center = clockImageView.center;
-        [self addSubview:clockCenterImageView];
-
-        UIImage *hourHandImage = [UIImage imageNamed:@"clock-hour-hand.png"];
-        self.hourHandImageView = [[UIImageView alloc] initWithImage:hourHandImage];
-        self.hourHandImageView.center = clockCenterImageView.center;
-        self.hourHandImageView.layer.anchorPoint = CGPointMake(0.5, 1.0);
-        [self insertSubview:self.hourHandImageView belowSubview:clockCenterImageView];
-
-        UIImage *minuteHandImage = [UIImage imageNamed:@"clock-minute-hand.png"];
-        self.minuteHandImageView = [[UIImageView alloc] initWithImage:minuteHandImage];
-        self.minuteHandImageView.center = clockCenterImageView.center;
-        self.minuteHandImageView.layer.anchorPoint = CGPointMake(0.5, 1.0);
-        [self insertSubview:self.minuteHandImageView belowSubview:self.hourHandImageView];
-
-        CGFloat labelHeight = 12.0f;
-        CGFloat labelWidth = self.frame.size.width - kMDCScrollBarLabelClockWidth - kMDCScrollBarLabelClockRightMargin;
-        self.timeLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, labelWidth, labelHeight)];
-        self.timeLabel.textColor = [UIColor whiteColor];
-
-        CGRect weekdayLabelRect = CGRectMake(kMDCScrollBarLabelClockWidth + kMDCScrollBarLabelClockRightMargin,
-                                             floorf(self.frame.size.height/2),
-                                             labelWidth,
-                                             labelHeight);
-        self.weekdayLabel = [[UILabel alloc] initWithFrame:weekdayLabelRect];
-        self.weekdayLabel.textColor = [UIColor colorWithWhite:0.7 alpha:1.0];
-
-        for (UILabel *label in @[self.timeLabel, self.weekdayLabel]) {
-            label.font = [UIFont fontWithName:@"Helvetica-Bold" size:12.0f];
-            label.shadowColor = [UIColor darkTextColor];
-            label.shadowOffset = CGSizeMake(0, -1);
-            label.textAlignment = NSTextAlignmentLeft;
-            label.backgroundColor = [UIColor clearColor];
-        }
-        [self addSubview:self.timeLabel];
-        [self insertSubview:self.weekdayLabel belowSubview:self.timeLabel];
-
-        [self setWeekdayLabelHidden:YES animated:NO];
+        _label = [[UILabel alloc] initWithFrame:self.bounds];
+        _label.textColor = [UIColor whiteColor];
+        _label.font = [UIFont fontWithName:@"Helvetica-Bold" size:12.0f];
+        _label.shadowColor = [UIColor darkTextColor];
+        _label.shadowOffset = CGSizeMake(0, -1);
+        _label.textAlignment = NSTextAlignmentCenter;
+        _label.backgroundColor = [UIColor clearColor];
+        _label.adjustsFontSizeToFitWidth = true;
+        _label.minimumFontSize = 10;
+        [self addSubview:_label];
     }
     return self;
 }
 
 
 #pragma mark - Public Interface
-
-- (void)setDate:(NSDate *)date {
-    unsigned int unitFlags = NSCalendarUnitYear | NSCalendarUnitMonth | NSCalendarUnitDay |
-                             NSCalendarUnitWeekday | NSCalendarUnitMinute;
-    NSDateComponents *dateComponents = [self.calendar components:unitFlags fromDate:date];
-    NSDateComponents *nowComponents = [self.calendar components:unitFlags fromDate:[NSDate date]];
-
-    if (nowComponents.year > dateComponents.year || nowComponents.month > dateComponents.month || nowComponents.day > dateComponents.day) {
-        NSDate *yesterday = [NSDate dateWithTimeIntervalSinceNow:-(60.0f * 60.0f * 24.0f)];
-        
-        NSDate *beginningOfTheDay = [NSDate date];
-        NSCalendar *cal = [NSCalendar currentCalendar];
-        NSDateComponents *components = [cal components:( NSCalendarUnitMonth | NSCalendarUnitDay | NSCalendarUnitYear | NSCalendarUnitHour | NSCalendarUnitMinute | NSCalendarUnitSecond ) fromDate:beginningOfTheDay];
-        [components setHour:0];
-        [components setMinute:0];
-        [components setSecond:0];
-        beginningOfTheDay = [cal dateFromComponents:components];
-        
-        if ([yesterday compare:date]!=NSOrderedDescending) {
-            self.weekdayLabel.text = NSLocalizedString(@"Yesterday", nil);
-        } else {
-            // or does it correspond to the elapsed week ?
-            NSDate* elapsedWeek = [beginningOfTheDay dateByAddingTimeInterval:-24*60*60*7];
-            if ([elapsedWeek compare:date]!=NSOrderedDescending) {
-                [self.weekdayDateFormatter setDateFormat:@"EEEE"];
-                self.weekdayLabel.text = [self.weekdayDateFormatter stringFromDate:date];
-            } else {
-                [self.weekdayDateFormatter setTimeStyle:NSDateFormatterNoStyle];
-                [self.weekdayDateFormatter setDateStyle:NSDateFormatterShortStyle];
-                self.weekdayLabel.text = [self.weekdayDateFormatter stringFromDate:date];
-            }
-        }
-        [self setWeekdayLabelHidden:NO animated:YES];
-    } else {
-        [self setWeekdayLabelHidden:YES animated:YES];
-    }
-
-    NSString *dateString = [self.dateFormatter stringFromDate:date];
-    self.timeLabel.text = dateString;
-
-    // Grab hour in 12hr format, regardless of user settings.
-    NSString *hourString = [[dateString componentsSeparatedByString:@":"] objectAtIndex:0];
-    NSUInteger hour = [hourString integerValue];
-
-    BOOL forward = [self.displayedDate compare:date] == NSOrderedAscending;
-    [self setClockHandWithType:MDCClockHandTypeHour
-                       toValue:hour
-                      inFuture:forward
-                      animated:YES];
-    [self setClockHandWithType:MDCClockHandTypeMinute
-                       toValue:dateComponents.minute
-                      inFuture:forward
-                      animated:YES];
-
-    self.displayedDate = date;
-}
 
 - (void)adjustPositionForScrollView:(UIScrollView *)scrollView {
     CGSize size = self.frame.size;
@@ -256,51 +135,4 @@ typedef enum {
 
 
 #pragma mark - Internal Methods
-
-- (void)setClockHandWithType:(MDCClockHandType)type toValue:(NSUInteger)value inFuture:(BOOL)inFuture animated:(BOOL)animated {
-    if (type == MDCClockHandTypeHour && value > 12) {
-        return;
-    }
-
-    if (type == MDCClockHandTypeMinute && value > 60) {
-        return;
-    }
-
-    CGFloat angleForValue = type == MDCClockHandTypeHour ? 30.0 : 6.0f;
-    __block UIImageView *handImageView =
-        type == MDCClockHandTypeHour ? self.hourHandImageView : self.minuteHandImageView;
-
-    CGFloat end = value * DEGREES_TO_RADIANS(angleForValue);
-    end = inFuture ? end : -end;
-
-    BOOL animationsEnabled = [UIView areAnimationsEnabled];
-    [UIView setAnimationsEnabled:animated];
-    [UIView animateWithDuration:self.clockAnimationDuration
-                          delay:0.0f
-                        options:UIViewAnimationOptionBeginFromCurrentState
-                     animations:^{
-                         handImageView.transform = CGAffineTransformMakeRotation(end);
-                     }
-                     completion:nil];
-    [UIView setAnimationsEnabled:animationsEnabled];
-}
-
-- (void)setWeekdayLabelHidden:(BOOL)hidden animated:(BOOL)animated {
-    CGFloat labelOriginX = kMDCScrollBarLabelClockWidth + kMDCScrollBarLabelClockRightMargin;
-    CGFloat labelOriginY = floorf((self.frame.size.height - self.timeLabel.frame.size.height)/2);
-    labelOriginY = hidden ? labelOriginY : floorf(labelOriginY - (labelOriginY/2) - 1);
-    CGRect labelRect = CGRectMake(labelOriginX,
-                                  labelOriginY,
-                                  self.timeLabel.frame.size.width,
-                                  self.timeLabel.frame.size.height);
-    
-    BOOL animationsEnabled = [UIView areAnimationsEnabled];
-    [UIView setAnimationsEnabled:animated];
-    [UIView animateWithDuration:self.clockAnimationDuration animations:^{
-        self.timeLabel.frame = labelRect;
-        self.weekdayLabel.alpha = hidden ? 0 : 1.0f;
-    }];
-    [UIView setAnimationsEnabled:animationsEnabled];
-}
-
 @end

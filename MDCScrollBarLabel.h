@@ -23,12 +23,12 @@
 
 
 #import <Foundation/Foundation.h>
-
+#import <UIKit/UIKit.h>
 
 @interface MDCScrollBarLabel : UIView
 
 @property (nonatomic, weak) UIScrollView *scrollView;
-@property (nonatomic, strong) NSDate *date;
+@property (nonatomic, readonly) UILabel *label;
 @property (nonatomic, readonly) BOOL displayed;
 @property (nonatomic, assign) NSTimeInterval clockAnimationDuration;
 @property (nonatomic, assign) NSTimeInterval fadeAnimationDuration;
