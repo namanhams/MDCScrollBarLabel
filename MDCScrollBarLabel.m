@@ -68,7 +68,7 @@ typedef enum {
         self.alpha = 0.0f;
         self.backgroundColor = [UIColor clearColor];
 
-        UIImage *backgroundImage = [UIImage imageNamed:@"label-background.png"];
+        UIImage *backgroundImage = [self imageFromBundle:@"label-background"];
         backgroundImage = [backgroundImage stretchableImageWithLeftCapWidth:15.0f
                                                                topCapHeight:5.0f];
         UIImageView *backgroundImageView = [[UIImageView alloc] initWithImage:backgroundImage];
@@ -135,4 +135,12 @@ typedef enum {
 
 
 #pragma mark - Internal Methods
+
+- (UIImage *)imageFromBundle:(NSString*)imageName {
+  NSBundle* bundle = [NSBundle bundleForClass:[MDCScrollBarLabel class]];
+  NSString *imagePath = [bundle pathForResource:imageName ofType:@"png"];
+  UIImage *image = [UIImage imageWithContentsOfFile:imagePath];
+  return image;
+}
+
 @end
